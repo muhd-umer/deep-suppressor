@@ -1,7 +1,6 @@
 name: deep-suppressor
 channels:
     - conda-forge
-    - pytorch
     - defaults
 dependencies:
     - python=3.10
@@ -16,12 +15,11 @@ dependencies:
     - scikit-image
     - seaborn
     - tqdm
-    - pytorch
-    - torchvision
-    - torchaudio
-    - torchtext
     - opencv
     - librosa
     - pip:
         - scipy
         - tensorboard
+
+# do the following separately in a terminal:
+# pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
