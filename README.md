@@ -32,5 +32,3 @@ conda activate deep-suppressor
 ```shell
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 ```
-
-*It is recommended to create a new virtual environment so that updates/downgrades of packages do not break other projects.*<br/>
