@@ -104,7 +104,7 @@ class AudioDataset(Dataset):
         Returns:
             torch.Tensor: Waveform of the WAV file.
         """
-        waveform, _ = torchaudio.load(filename)
+        waveform, _ = torchaudio.load(filename)  # type: ignore
         waveform = waveform.squeeze()
         return waveform
 
