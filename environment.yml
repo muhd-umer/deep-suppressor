@@ -21,7 +21,7 @@ dependencies:
         - scipy
         - tensorboard
         - graphviz
-        - torchviz
+        - torchview
 
 # do the following separately in a terminal:
 # pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
