@@ -5,17 +5,16 @@ import torch.nn.functional as F
 
 class UpsampleConv(nn.Module):
     """
-    UpsampleConv class for performing transposed convolution.
+    UpsampleConv block that performs transposed convolution to upsample the input tensor.
 
     Args:
-        in_channels (int): Number of input channels.
-        out_channels (int): Number of output channels.
-        kernel_size (int or tuple): Size of the convolution kernel.
-        stride (int or tuple): Stride of the convolution.
+        in_channels: Number of input channels.
+        out_channels: Number of output channels.
+        kernel_size: Size of the convolution kernel.
+        stride: Stride of the convolution.
 
-    Attributes:
-        conv_transpose (nn.ConvTranspose2d): Transposed convolution layer.
-
+    Returns:
+        Output tensor of the block.
     """
 
     def __init__(self, in_channels, out_channels, kernel_size, stride):
@@ -24,78 +23,53 @@ class UpsampleConv(nn.Module):
             kernel_size = (kernel_size, kernel_size)
         if isinstance(stride, int):
             stride = (stride, stride)
-        padding = ((stride[0] - 1) * (kernel_size[0] - 1) + 1) // 2
         self.conv_transpose = nn.ConvTranspose2d(
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=kernel_size,
             stride=stride,
-            padding=padding,
-            output_padding=stride[0] - 1,
+            padding=0,
         )
 
     def forward(self, x):
-        """
-        Forward pass of the UpsampleConv module.
-
-        Args:
-            x (torch.Tensor): Input tensor.
-
-        Returns:
-            torch.Tensor: Output tensor.
-
-        """
         x = self.conv_transpose(x)
         return x
 
 
 class UpsampleSimple(nn.Module):
     """
-    UpsampleSimple class for performing simple upsampling.
+    UpsampleSimple block that performs nearest neighbor upsampling.
 
     Args:
-        strides (int): Upsampling factor.
+        in_channels: Number of input channels.
+        out_channels: Number of output channels.
+        kernel_size: Size of the convolution kernel.
+        stride: Stride of the convolution.
 
-    Attributes:
-        upsample (nn.Upsample): Upsampling layer.
-
+    Returns:
+        Output tensor of the block.
     """
 
-    def __init__(self, strides):
+    def __init__(self, in_channels, out_channels, kernel_size, stride):
         super(UpsampleSimple, self).__init__()
-        self.upsample = nn.Upsample(scale_factor=strides, mode="nearest")
+        self.upsample = nn.Upsample(scale_factor=stride, mode="nearest")
 
     def forward(self, x):
-        """
-        Forward pass of the UpsampleSimple module.
-
-        Args:
-            x (torch.Tensor): Input tensor.
-
-        Returns:
-            torch.Tensor: Output tensor.
-
-        """
         x = self.upsample(x)
         return x
 
 
 class AttentionGate(nn.Module):
     """
-    AttentionGate class for performing attention gating.
+    AttentionGate block that performs attention mechanism across two input tensors.
 
     Args:
-        inp_1_channels (int): Number of channels in the first input tensor.
-        inp_2_channels (int): Number of channels in the second input tensor.
-        n_intermediate_filters (int): Number of intermediate filters.
+        inp_1_channels: Number of channels in the first input tensor.
+        inp_2_channels: Number of channels in the second input tensor.
+        n_intermediate_filters: Number of intermediate filters.
 
-    Attributes:
-        inp_1_conv (nn.Conv2d): Convolution layer for the first input tensor.
-        inp_2_conv (nn.Conv2d): Convolution layer for the second input tensor.
-        f (nn.ReLU): ReLU activation function.
-        g (nn.Conv2d): Convolution layer for gating.
-        h (nn.Sigmoid): Sigmoid activation function.
-
+    Returns:
+        Output tensor of the block.
     """
 
     def __init__(self, inp_1_channels, inp_2_channels, n_intermediate_filters):
@@ -111,17 +85,6 @@ class AttentionGate(nn.Module):
         self.h = nn.Sigmoid()
 
     def forward(self, inp_1, inp_2):
-        """
-        Forward pass of the AttentionGate module.
-
-        Args:
-            inp_1 (torch.Tensor): First input tensor.
-            inp_2 (torch.Tensor): Second input tensor.
-
-        Returns:
-            torch.Tensor: Output tensor.
-
-        """
         inp_1_conv = self.inp_1_conv(inp_1)
         inp_2_conv = self.inp_2_conv(inp_2)
         f = self.f(inp_1_conv + inp_2_conv)
@@ -132,61 +95,41 @@ class AttentionGate(nn.Module):
 
 class AttentionConcat(nn.Module):
     """
-    AttentionConcat class for performing attention concatenation.
+    AttentionConcat block that concatenates the output of AttentionGate with the input tensor.
 
     Args:
-        conv_below_channels (int): Number of channels in the convolution below.
-        skip_connection_channels (int): Number of channels in the skip connection.
+        conv_below: Number of channels in the input tensor.
+        skip_connection: Number of channels in the skip connection tensor.
 
-    Attributes:
-        attention_gate (AttentionGate): AttentionGate module.
-
+    Returns:
+        Output tensor of the block.
     """
 
-    def __init__(self, conv_below_channels, skip_connection_channels):
+    def __init__(self, conv_below, skip_connection):
         super().__init__()
-        self.attention_gate = AttentionGate(
-            skip_connection_channels, conv_below_channels, conv_below_channels
-        )
+        self.attention_gate = AttentionGate(skip_connection, conv_below, conv_below)
 
     def forward(self, conv_below, skip_connection):
-        """
-        Forward pass of the AttentionConcat module.
-
-        Args:
-            conv_below (torch.Tensor): Convolution below tensor.
-            skip_connection (torch.Tensor): Skip connection tensor.
-
-        Returns:
-            torch.Tensor: Output tensor.
-
-        """
         attention_across = self.attention_gate(skip_connection, conv_below)
         return torch.cat([conv_below, attention_across], dim=1)
 
 
 class Conv2dBlock(nn.Module):
     """
-    Conv2dBlock class for performing 2D convolution.
+    Conv2dBlock block that performs convolution on the input tensor.
 
     Args:
-        in_channels (int): Number of input channels.
-        out_channels (int): Number of output channels.
-        use_batch_norm (bool): Whether to use batch normalization.
-        dropout (float): Dropout rate.
-        dropout_type (str): Type of dropout.
-        kernel_size (int or tuple): Size of the convolution kernel.
-        activation (str): Activation function.
-        padding (str): Padding type.
+        in_channels: Number of input channels.
+        out_channels: Number of output channels.
+        use_batch_norm: Whether to use batch normalization.
+        dropout: Dropout probability.
+        dropout_type: Type of dropout to use.
+        kernel_size: Size of the convolution kernel.
+        activation: Activation function to use.
+        padding: Padding type to use.
 
-    Attributes:
-        DO (nn.Dropout or nn.Dropout2d): Dropout layer.
-        conv1 (nn.Conv2d): Convolution layer 1.
-        bn1 (nn.BatchNorm2d or nn.Identity): Batch normalization layer 1.
-        conv2 (nn.Conv2d): Convolution layer 2.
-        bn2 (nn.BatchNorm2d or nn.Identity): Batch normalization layer 2.
-        activation (nn.ReLU or nn.Identity): Activation function.
-
+    Returns:
+        Output tensor of the block.
     """
 
     def __init__(
@@ -230,16 +173,6 @@ class Conv2dBlock(nn.Module):
         )
 
     def forward(self, x):
-        """
-        Forward pass of the Conv2dBlock module.
-
-        Args:
-            x (torch.Tensor): Input tensor.
-
-        Returns:
-            torch.Tensor: Output tensor.
-
-        """
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.activation(x)

@@ -17,18 +17,13 @@ from src import (
 
 class TestBlocks(unittest.TestCase):
     def test_upsample_conv(self):
-        upsample = UpsampleConv(
-            in_channels=3,
-            out_channels=6,
-            kernel_size=3,
-            stride=2,
-        )
-        x = torch.randn(2, 3, 32, 32)
+        upsample = UpsampleConv(256, 128, 2, 2)
+        x = torch.randn(2, 256, 8, 16)
         output = upsample(x)
-        self.assertEqual(output.shape, (2, 6, 64, 64))
+        self.assertEqual(output.shape, (2, 128, 16, 32))
 
     def test_upsample_simple(self):
-        upsample = UpsampleSimple(strides=2)
+        upsample = UpsampleSimple(3, 6, 3, 2)
         x = torch.randn(2, 3, 32, 32)
         output = upsample(x)
         self.assertEqual(output.shape, (2, 3, 64, 64))
