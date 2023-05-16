@@ -35,7 +35,7 @@ class AudioDataset(Dataset):
         self.sr = 8000
         self.speech_length_pix_sec = 27e-3
         self.total_length = 3.6
-        self.trim_length = 28305
+        self.trim_length = 28400
         self.n_fft = 255
         self.frame_length = 255
         self.frame_step = int(445 / 4)
@@ -69,7 +69,7 @@ class AudioDataset(Dataset):
             spectrogram and the clean spectrogram.
         """
         filepath = self.files[idx]
-        wav = self.load_wav(filepath)  # (28400,)
+        wav = self.preprocess_torch(filepath)  # (28400,)
         wav_corr, wavclean = self.white_noise(wav)  # (28400,), (28400,)
         wav_corr, wavclean = self.urban_noise(wav_corr, wavclean)  # (28400,), (28400,)
         spectrogram_corr, spectrogram = self.convert_to_spectrogram(
@@ -106,6 +106,23 @@ class AudioDataset(Dataset):
         """
         waveform, _ = torchaudio.load(filename)  # type: ignore
         waveform = waveform.squeeze()
+        return waveform
+
+    def preprocess_torch(self, filepath: str) -> torch.Tensor:
+        """
+        Preprocesses a WAV file using PyTorch.
+
+        Args:
+            filepath (str): The path to the WAV file.
+
+        Returns:
+            torch.Tensor: The preprocessed audio data as a PyTorch tensor.
+        """
+        waveform = self.load_wav(filepath)
+        waveform = waveform.squeeze()
+        waveform = waveform[: self.trim_length]
+        zero_padding = torch.zeros(self.trim_length - waveform.shape[0])
+        waveform = torch.cat([zero_padding, waveform], 0)
         return waveform
 
     def white_noise(self, data, factor=0.03):
