@@ -32,8 +32,6 @@ class AudioDataset(Dataset):
         """
         self.files = files
         self.train = train
-        self.trim_length = 16000
-        self.frame_step = 110
         self.sr = 8000
         self.speech_length_pix_sec = 27e-3
         self.total_length = 3.6
@@ -81,6 +79,7 @@ class AudioDataset(Dataset):
             spectrogram_corr, spectrogram = self.expand_dims(
                 spectrogram_corr, spectrogram
             )  # (1, 128, 256), (1, 128, 256)
+            # Return the spectrograms without augmentation
             return spectrogram_corr, spectrogram
 
         spectrogram_corr, spectrogram = self.spectrogram_abs(
@@ -92,6 +91,7 @@ class AudioDataset(Dataset):
         spectrogram_corr, spectrogram = self.augment(
             spectrogram_corr, spectrogram
         )  # (1, 128, 256), (1, 128, 256)
+        # Return the augmented spectrograms
         return spectrogram_corr, spectrogram
 
     def load_wav(self, filename: str) -> torch.Tensor:
