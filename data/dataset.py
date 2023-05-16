@@ -69,9 +69,9 @@ class AudioDataset(Dataset):
             spectrogram and the clean spectrogram.
         """
         filepath = self.files[idx]
-        wav = self.preprocess_torch(filepath)  # (28400,)
-        wav_corr, wavclean = self.white_noise(wav)  # (28400,), (28400,)
-        wav_corr, wavclean = self.urban_noise(wav_corr, wavclean)  # (28400,), (28400,)
+        wav = self.preprocess_torch(filepath)  # (28305,)
+        wav_corr, wavclean = self.white_noise(wav)  # (28305,), (28305,)
+        wav_corr, wavclean = self.urban_noise(wav_corr, wavclean)  # (28305,), (28305,)
         spectrogram_corr, spectrogram = self.convert_to_spectrogram(
             wav_corr, wavclean
         )  # (128, 256), (128, 256)
@@ -104,8 +104,8 @@ class AudioDataset(Dataset):
         Returns:
             torch.Tensor: Waveform of the WAV file.
         """
-        waveform, _ = torchaudio.load(filename, channels_first=True)  # type: ignore
-        waveform = waveform.mean(dim=0)  # convert to mono channel
+        waveform, _ = torchaudio.load(filename)  # type: ignore
+        waveform = waveform.squeeze()
         return waveform
 
     def preprocess_torch(self, filepath: str) -> torch.Tensor:
