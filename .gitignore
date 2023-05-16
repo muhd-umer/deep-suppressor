@@ -163,3 +163,4 @@ data/noise_files/*
 data/speech_files/*
 dataloader_test.ipynb
 .vscode/
+notebooks/logs/
