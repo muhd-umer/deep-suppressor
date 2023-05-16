@@ -29,13 +29,23 @@ def get_dataloader(
         tuple or DataLoader: A tuple of three DataLoaders for the train, validation, and test sets if `test` is True, otherwise a tuple of two DataLoaders for the train and validation sets.
     """
     speech_files = glob.glob(osp.join(speech_dir, "*.wav"))
-    split_index = int(len(speech_files) * split_ratio)
-    train_files = speech_files[split_index:]
-    val_files = speech_files[:split_index]
+
+    if split_ratio is not None and not test:
+        split_index = int(len(speech_files) * split_ratio)
+        train_files = speech_files[split_index:]
+        val_files = speech_files[:split_index]
+    elif test:
+        val_files = speech_files
+        test_dataset = AudioDataset(val_files, train=False)
+        test_dataloader = DataLoader(test_dataset)
+        return test_dataloader
+    else:
+        raise ValueError(
+            "Invalid split ratio. Please provide a valid split ratio or set test to True."
+        )
 
     train_dataset = AudioDataset(train_files)
     val_dataset = AudioDataset(val_files)
-    test_dataset = AudioDataset(val_files, train=False)
 
     train_dataloader = DataLoader(
         train_dataset,
@@ -47,14 +57,11 @@ def get_dataloader(
         batch_size=batch_size,
         shuffle=False,
     )
-    if test:
-        test_dataloader = DataLoader(test_dataset)
-        return test_dataloader
 
     return train_dataloader, val_dataloader
 
 
-def visualize_spectrogram(dataloader, num_samples=2):
+def visualize_spectrogram(dataloader: DataLoader, num_samples=2):
     """
     Visualizes the spectrograms of input and target samples in the dataloader.
 
@@ -73,7 +80,7 @@ def visualize_spectrogram(dataloader, num_samples=2):
         plt.show()
 
 
-def dataloader_sampler(dataloader, num_samples=4):
+def dataloader_sampler(dataloader: DataLoader, num_samples=4):
     """
     Iterates over the dataloader and prints the shapes of the first 4 samples.
 
