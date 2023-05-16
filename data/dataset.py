@@ -104,8 +104,8 @@ class AudioDataset(Dataset):
         Returns:
             torch.Tensor: Waveform of the WAV file.
         """
-        waveform, _ = torchaudio.load(filename)  # type: ignore
-        waveform = waveform.squeeze()
+        waveform, _ = torchaudio.load(filename, channels_first=True)  # type: ignore
+        waveform = waveform.mean(dim=0)  # convert to mono channel
         return waveform
 
     def preprocess_torch(self, filepath: str) -> torch.Tensor:

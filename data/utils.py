@@ -34,6 +34,13 @@ def get_dataloader(
         split_index = int(len(speech_files) * split_ratio)
         train_files = speech_files[split_index:]
         val_files = speech_files[:split_index]
+    elif split_ratio is not None and test:
+        split_index = int(len(speech_files) * split_ratio)
+        train_files = speech_files[split_index:]
+        val_files = speech_files[:split_index]
+        test_dataset = AudioDataset(val_files, train=False)
+        test_dataloader = DataLoader(test_dataset)
+        return test_dataloader
     elif test:
         val_files = speech_files
         test_dataset = AudioDataset(val_files, train=False)
