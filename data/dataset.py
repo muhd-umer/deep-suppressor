@@ -3,12 +3,18 @@ Custom dataloader for the clean, noisy, and mixed audio data
 """
 
 import os
-import os.path as osp
 import glob
 import torch
 import torchaudio
 from typing import Tuple
 from torch.utils.data import Dataset
+import librosa
+import numpy as np
+from numpy.random import MT19937
+from numpy.random import RandomState, SeedSequence
+from scipy.interpolate import interp1d
+
+rs = RandomState(MT19937(SeedSequence(42)))
 
 
 class AudioDataset(Dataset):
@@ -19,26 +25,29 @@ class AudioDataset(Dataset):
         files (list): List of file paths to load.
         train (bool, optional): Whether the dataset is for training or
         validation. Defaults to True.
+        sample_only (bool, optional): Whether to return only the clean
     """
 
-    def __init__(self, files, train=True):
+    def __init__(self, files, train=True, sample_only=False):
         """
         Initializes the AudioDataset.
 
         Args:
             files (list): List of file paths to load.
             train (bool, optional): Whether the dataset is for training or
+            sample_only (bool, optional): Whether to return only the clean spectrogram.
             validation. Defaults to True.
         """
         self.files = files
         self.train = train
-        self.sr = 8000
+        self.sample_only = sample_only
+        self.sr = 16000
         self.speech_length_pix_sec = 27e-3
         self.total_length = 3.6
-        self.trim_length = 28400
-        self.n_fft = 255
-        self.frame_length = 255
-        self.frame_step = int(445 / 4)
+        self.trim_length = 56800
+        self.n_fft = 510
+        self.frame_length = 510
+        self.frame_step = 112 - 1
 
         # Define the absolute paths of the data directories
         self.DATA_DIR = os.path.abspath(
@@ -57,7 +66,7 @@ class AudioDataset(Dataset):
         """
         return len(self.files)
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, idx: int):
         """
         Returns the item at the given index.
 
@@ -69,12 +78,18 @@ class AudioDataset(Dataset):
             spectrogram and the clean spectrogram.
         """
         filepath = self.files[idx]
-        wav = self.preprocess_torch(filepath)  # (28305,)
-        wav_corr, wavclean = self.white_noise(wav)  # (28305,), (28305,)
-        wav_corr, wavclean = self.urban_noise(wav_corr, wavclean)  # (28305,), (28305,)
+        wav = self.preprocess(filepath)  # (56800,)
+        wav_corr, wavclean = self.white_noise(wav)  # (56800,), (56800,)
+        wav_corr, wavclean = self.urban_noise(wav_corr, wavclean)  # (56800,), (56800,)
+        # Convert to torch tensors
+        wav_corr = torch.from_numpy(wav_corr).float()
+        wavclean = torch.from_numpy(wavclean).float()
         spectrogram_corr, spectrogram = self.convert_to_spectrogram(
             wav_corr, wavclean
         )  # (128, 256), (128, 256)
+        if self.sample_only:
+            return spectrogram
+
         if not self.train:
             spectrogram_corr, spectrogram = self.expand_dims(
                 spectrogram_corr, spectrogram
@@ -108,6 +123,36 @@ class AudioDataset(Dataset):
         waveform = waveform.squeeze()
         return waveform
 
+    def preprocess(
+        self,
+        filepath,
+        fixed_start=False,
+    ):
+        """
+        Preprocesses the audio file at the given filepath by trimming it to a
+        fixed length and converting it to a PyTorch tensor.
+
+        Args:
+            filepath (str): The path to the audio file to preprocess.
+            fixed_start (int): If specified, the start index of the audio to
+            trim to. Otherwise, a random start index is chosen.
+
+        Returns:
+            torch.Tensor: The preprocessed audio as a PyTorch tensor.
+        """
+        wav, _ = librosa.load(filepath, sr=self.sr)
+        # wav, _ = librosa.effects.trim(wav, top_db=38)
+        size = wav.shape[0]
+        if size < self.trim_length:
+            wav = np.pad(wav, (0, self.trim_length - size), "constant")
+        elif size - self.trim_length - 1 > 0:
+            random_start = rs.randint(0, size - self.trim_length - 1)
+            wav = wav[random_start : random_start + self.trim_length]
+        else:
+            wav = wav[: self.trim_length]
+
+        return wav
+
     def preprocess_torch(self, filepath: str) -> torch.Tensor:
         """
         Preprocesses a WAV file using PyTorch.
@@ -130,38 +175,49 @@ class AudioDataset(Dataset):
         Adds white noise to the given waveform.
 
         Args:
-            data (torch.Tensor): Waveform to add noise to.
+            data (numpy.ndarray): Waveform to add noise to.
             factor (float, optional): Factor to scale the noise amplitude by.
-            Defaults to 0.03.
+                Defaults to 0.03.
 
         Returns:
-            Tuple[torch.Tensor, torch.Tensor]: Tuple containing the noisy waveform
-            and the original waveform.
+            Tuple[numpy.ndarray, numpy.ndarray]: Tuple containing the noisy waveform
+                and the original waveform.
         """
-        noise_amp = factor * torch.max(data) * torch.randn(1)
-        corr_data = data + noise_amp * torch.randn(data.shape)
+        noise_amp = factor * np.max(data) * np.random.randn(1)
+        corr_data = data + noise_amp * np.random.randn(data.shape[0])
         return corr_data, data
 
-    def urban_noise(self, corr_data, data, factor=0.4, sr=None):
+    def urban_noise(self, corr_data, data, factor=0.4):
         """
         Adds urban noise to the given waveform.
 
         Args:
-            corr_data (torch.Tensor): Noisy waveform to add urban noise to.
-            data (torch.Tensor): Original waveform.
+            corr_data (numpy.ndarray): Noisy waveform to add urban noise to.
+            data (numpy.ndarray): Original waveform.
             factor (float, optional): Factor to scale the noise amplitude by.
-            Defaults to 0.4.
-            sr (int, optional): Sample rate of the waveform. Defaults to None.
+                Defaults to 0.4.
 
         Returns:
-            Tuple[torch.Tensor, torch.Tensor]: Tuple containing the waveform with
-            urban noise and the original waveform.
+            Tuple[numpy.ndarray, numpy.ndarray]: Tuple containing the waveform with
+                urban noise and the original waveform.
         """
-        noisefile = self.noise_files[torch.randint(len(self.noise_files), (1,))]
-        noisefile = self.load_wav(noisefile)
-        mixed = (
-            noisefile * factor * torch.max(corr_data) / torch.max(noisefile) + corr_data
-        )
+        noisefile = self.noise_files[np.random.randint(len(self.noise_files))]
+        noisefile, _ = librosa.load(noisefile, sr=self.sr)
+
+        if len(noisefile) < len(corr_data):
+            x_old = np.linspace(0, 1, len(noisefile))
+            x_new = np.linspace(0, 1, len(corr_data))
+            f = interp1d(x_old, noisefile, kind="cubic")
+            noisefile = f(x_new)
+            noise_length = len(noisefile)
+            if noise_length < len(corr_data):
+                pad_length = len(corr_data) - noise_length
+                noise = np.random.normal(0, 1, pad_length)
+                noisefile = np.concatenate((noisefile, noise))
+        elif len(noisefile) > self.trim_length:
+            noisefile = noisefile[: self.trim_length]
+
+        mixed = noisefile * factor * np.max(corr_data) / np.max(noisefile) + corr_data
         return mixed, data
 
     def convert_to_spectrogram(self, wav_corr, wavclean):
