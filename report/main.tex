@@ -69,14 +69,12 @@ The methodology section of our project report describes the steps we took to per
     \centering
     \includesvg[width=0.47\textwidth, height= 0.35\textwidth]{figures/in_1}
     \caption{Input and Corrupted Spectrograms 1}
-    \label{fig:my_label}
 \end{figure}
 
 \begin{figure}[b!]
     \centering
     \includesvg[width=0.47\textwidth, height= 0.35\textwidth]{figures/in_2}
     \caption{Input and Corrupted Spectrograms 2}
-    \label{fig:my_label}
 \end{figure}
 
 The first step was dataset preparation. We utilized three datasets for our project, namely the wavefile dataset, white noise dataset, and urban noise dataset. The wavefile dataset contained clean audio signals, while the white noise and urban noise datasets contained various types of noise that could potentially degrade the quality of the audio signals. We mapped the wavefile dataset with the urban noise and white noise datasets to generate pairs of clean and corrupted audio signals for training the UNet model.
@@ -93,7 +91,6 @@ After generating the spectrograms, we trained the UNet model. We used the pairs 
     \centering
     \includegraphics[width=0.6\textwidth]{figures/spectrograms.png}
     \caption{Processing on the spectrograms of a test sample}
-    \label{fig:fig1}
 \end{figure*}
 
 To generate the STFT responses, the audio files were divided into smaller segments using the chosen window size and overlap. Each segment was then transformed into the frequency domain using the Fast Fourier Transform (FFT) algorithm, resulting in a time-frequency representation.
@@ -126,7 +123,6 @@ The graph displaying the PESQ difference over iterations illustrates the model's
     \centering
     \includesvg[width=0.47\textwidth, height= 0.35\textwidth]{figures/pesq_diff_hist}
     \caption{Count vs. PESQ Difference}
-    \label{fig:my_label}
 \end{figure}
 
 The graph showing the L1 loss over iterations provides insight into how the model's ability to reconstruct the clean audio improves over time. A decreasing trend in the L1 loss indicates that the model is converging towards a more accurate representation of the clean audio. By analyzing these two graphs, we can assess the convergence and performance of the UNet model throughout the training process, providing valuable insights into its effectiveness in denoising and reconstructing the clean audio signal.
@@ -135,7 +131,6 @@ The graph showing the L1 loss over iterations provides insight into how the mode
     \centering
     \includesvg[width=0.47\textwidth, height= 0.35\textwidth]{figures/loss_with_noise}
     \caption{L1 loss vs. Count}
-    \label{fig:my_label}
 \end{figure}
 
 By comparing the two spectrograms, it becomes evident that the UNet model has effectively removed the noise from the input spectrogram. The clean spectrogram exhibits reduced noise, clearer frequency components, and enhanced signal quality compared to the noisy spectrogram.
