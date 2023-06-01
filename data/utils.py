@@ -9,6 +9,8 @@ from typing import Optional
 from .dataset import AudioDataset
 import matplotlib.pyplot as plt
 import glob
+import librosa
+import numpy as np
 
 plt.style.use("default")
 
@@ -85,6 +87,26 @@ def get_dataloader(
     return train_dataloader, val_dataloader
 
 
+def convert_to_spectrogram(wav, n_fft=510, frame_length=510, frame_step=112 - 1):
+    """
+    Converts the given waveforms to spectrograms.
+
+    Args:
+        wav (torch.Tensor): Original waveform.
+
+    Returns:
+        torch.Tensor: Spectrogram of the given waveform.
+    """
+    spectrogram = torch.stft(
+        wav,
+        n_fft=n_fft,
+        hop_length=frame_step,
+        win_length=frame_length,
+        return_complex=True,
+    )
+    return spectrogram
+
+
 def visualize_spectrogram(dataloader: DataLoader, num_samples=2):
     """
     Visualizes the spectrograms of input and target samples in the dataloader.
@@ -115,3 +137,46 @@ def dataloader_sampler(dataloader: DataLoader, num_samples=4):
         if i > num_samples - 1:
             break
         print(f"Sample {i+1} - Data shape: {data.shape}, Target shape: {target.shape}")
+
+
+class AudioSplitter:
+    def __init__(self, chunk_size=56800):
+        self.chunk_size = chunk_size
+
+    def split_audio(self, audio):
+        """
+        Split an audio signal into chunks of a given size.
+
+        Args:
+            audio (np.ndarray): The audio signal to split.
+            sample_rate (int): The sample rate of the audio signal.
+
+        Returns:
+            list: A list of audio chunks.
+        """
+        # Calculate the number of chunks
+        num_chunks = int(np.ceil(len(audio) / self.chunk_size))
+
+        # Pad the audio signal with zeros if necessary
+        padded_audio = np.zeros(num_chunks * self.chunk_size)
+        padded_audio[: len(audio)] = audio
+
+        # Split the audio signal into chunks
+        chunks = [
+            padded_audio[i * self.chunk_size : (i + 1) * self.chunk_size]
+            for i in range(num_chunks)
+        ]
+
+        return chunks
+
+    def get_tensor_chunks(self, file_path):
+        # Load the audio file
+        audio, sample_rate = librosa.load(file_path, sr=16000)
+
+        # Split the audio signal into chunks
+        chunks = self.split_audio(audio)
+
+        # Convert each chunk to a PyTorch tensor
+        tensor_chunks = [torch.from_numpy(chunk).float() for chunk in chunks]
+
+        return tensor_chunks
