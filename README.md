@@ -1,5 +1,5 @@
 # DeepSuppressor
-DeepSuppressor is a deep learning-based speech denoiser that can significantly improve the quality of speech signals that are corrupted by noise. The denoiser is trained on a large dataset of clean and noisy speech signals, and it can be used to denoise speech signals in real time or offline.
+DeepSuppressor is a deep learning-based speech denoiser which can significantly improve the quality of speech signals. The denoiser is trained on a large dataset of clean and noisy speech signals, and it can be used to denoise speech signals in real time or offline.
 
 ## Installation
 To get started with this project, follow the steps below:
