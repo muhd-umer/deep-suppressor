@@ -1,4 +1,7 @@
 # DeepSuppressor
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0.1-orange.svg)](https://pytorch.org/)
+
 DeepSuppressor is a deep learning-based speech denoiser which can significantly improve the quality of speech signals. The denoiser is trained on a large dataset of clean and noisy speech signals, and it can be used to denoise speech signals in real time or offline.
 
 ## Installation
@@ -35,5 +38,5 @@ To get started with this project, follow the steps below:
 - Install PyTorch (Stable 2.0.1):
 
     ```shell
-    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+    pip3 install torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 --index-url https://download.pytorch.org/whl/cu118
     ```
