@@ -23,8 +23,17 @@ To get started with this project, follow the steps below:
 
 - Alternatively, you can use `mamba` (faster than conda) package manager to create a new virtual environment:
 
-    ```shell
-    conda install mamba -n base -c conda-forge
+    ```fish
+    wget -O miniforge.sh \
+         "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+    bash miniforge.sh -b -p "${HOME}/conda"
+
+    source "${HOME}/conda/etc/profile.d/conda.sh"
+
+    # For mamba support also run the following command
+    source "${HOME}/conda/etc/profile.d/mamba.sh"
+
+    conda activate
     mamba env create -f environment.yml
     ```
 
